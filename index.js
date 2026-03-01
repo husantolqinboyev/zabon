@@ -454,7 +454,7 @@ const startBot = async (retries = 5) => {
     } else {
         console.warn('Mini App build topilmadi. web/dist mavjud emas.');
     }
-    const miniappPath = path.resolve(__dirname, '..', 'miniapp');
+    const miniappPath = path.join(__dirname, 'miniapp');
     const miniappExists = fs.existsSync(miniappPath);
     if (miniappExists) {
         app.use(express.static(miniappPath));
