@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: ravon-ai-bot
+    env: node
+    plan: free
+    buildCommand: "npm install && npm --prefix web install && npm --prefix web run build"
+    startCommand: "node index.js"
+    envVars:
+      - key: WEB_CONCURRENCY
+        value: "0"
+      - key: NODE_ENV
+        value: "production"

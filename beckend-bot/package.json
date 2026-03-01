@@ -1,0 +1,31 @@
+{
+  "name": "ravon_ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Telegram bot + web app for audio assessment using Ravon AI",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "echo \"no tests\""
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.95.3",
+    "axios": "^1.6.8",
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.5",
+    "express": "^5.2.1",
+    "fs-extra": "^11.2.0",
+    "google-tts-api": "^2.0.2",
+    "msedge-tts": "^2.0.3",
+    "multer": "^2.1.0",
+    "pdfkit": "^0.17.2",
+    "qrcode": "^1.5.4",
+    "telegraf": "^4.16.3",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
