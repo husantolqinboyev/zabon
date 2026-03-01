@@ -66,7 +66,7 @@
             transform: scale(0.96);
         }
         .header-title {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 650;
             background: linear-gradient(145deg, #113355, #2b4b7a);
             -webkit-background-clip: text;
@@ -104,7 +104,7 @@
             justify-content: space-between;
         }
         .current-name {
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 800;
             background: linear-gradient(145deg, #004a9e, #002856);
             -webkit-background-clip: text;
@@ -131,7 +131,7 @@
 
         /* bo'lim sarlavhalari */
         .section-title {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 650;
             color: #003368;
             margin: 22px 0 14px 8px;
@@ -160,14 +160,14 @@
             box-shadow: 0 6px 14px rgba(0,30,60,0.08);
         }
         .plan-icon {
-            width: 60px;
-            height: 60px;
+            width: 52px;
+            height: 52px;
             background: white;
             border-radius: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
+            font-size: 28px;
             color: #004c99;
             box-shadow: 0 6px 16px rgba(0,70,150,0.15);
             flex-shrink: 0;
@@ -237,14 +237,14 @@
             gap: 14px;
         }
         .free-icon {
-            width: 64px;
-            height: 64px;
+            width: 56px;
+            height: 56px;
             background: #ffe6b3;
             border-radius: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 34px;
+            font-size: 30px;
             color: #b25600;
         }
         .free-text h3 {
@@ -328,32 +328,32 @@
         <div class="tarif-header">
             <div class="back-btn" id="backBtn" onclick="history.back(); return false;"><i class="fas fa-arrow-left"></i></div>
             <div class="header-title">
-                <i class="fa-regular fa-gem"></i> Tariflar | Ko‘proq foyda
+                <i class="fa-solid fa-gem"></i> Tariflar | Ko‘proq foyda
             </div>
         </div>
 
         <!-- JORIY TARIF -->
         <div class="current-tarif">
             <div class="current-label">
-                <i class="fa-regular fa-clock"></i> Ayni vaqtdagi tarifingiz
+                <i class="fa-solid fa-clock"></i> Ayni vaqtdagi tarifingiz
             </div>
             <div class="current-row">
                 <span class="current-name">PREMIUM</span>
-                <span class="current-badge"><i class="fa-regular fa-star"></i> aktiv</span>
+                <span class="current-badge"><i class="fa-solid fa-star"></i> aktiv</span>
             </div>
             <div class="current-valid">
-                <i class="fa-regular fa-calendar"></i> Amal qilish muddati: 30.06.2026
+                <i class="fa-solid fa-calendar"></i> Amal qilish muddati: 30.06.2026
             </div>
         </div>
 
         <!-- MAVJUD TARIFLAR RO'YXATI -->
         <div class="section-title">
-            <i class="fa-regular fa-list"></i> Mavjud tariflar
+            <i class="fa-solid fa-list"></i> Mavjud tariflar
         </div>
         <div class="plans-grid">
             <!-- Tarif 1: STANDART -->
             <div class="plan-card">
-                <div class="plan-icon"><i class="fa-regular fa-paper-plane"></i></div>
+                <div class="plan-icon"><i class="fa-solid fa-paper-plane"></i></div>
                 <div class="plan-details">
                     <div class="plan-name">Standart</div>
                     <div class="plan-features">
@@ -367,7 +367,7 @@
 
             <!-- Tarif 2: PREMIUM (joriy, lekin taklif) -->
             <div class="plan-card">
-                <div class="plan-icon"><i class="fa-regular fa-gem"></i></div>
+                <div class="plan-icon"><i class="fa-solid fa-gem"></i></div>
                 <div class="plan-details">
                     <div class="plan-name">Premium</div>
                     <div class="plan-features">
@@ -382,7 +382,7 @@
 
             <!-- Tarif 3: MAX (yillik) -->
             <div class="plan-card">
-                <div class="plan-icon"><i class="fa-regular fa-crown"></i></div>
+                <div class="plan-icon"><i class="fa-solid fa-crown"></i></div>
                 <div class="plan-details">
                     <div class="plan-name">Max (yillik)</div>
                     <div class="plan-features">
@@ -398,11 +398,11 @@
 
         <!-- BEPUL LIMIT OLISH (referal) -->
         <div class="section-title" style="margin-top: 20px;">
-            <i class="fa-regular fa-gift" style="color:#d97917;"></i> Bepul limit olish
+            <i class="fa-solid fa-gift" style="color:#d97917;"></i> Bepul limit olish
         </div>
         <div class="free-limit-card" id="freeLimitToggle">
             <div class="free-header">
-                <div class="free-icon"><i class="fa-regular fa-hand-peace"></i></div>
+                <div class="free-icon"><i class="fa-solid fa-hand-peace"></i></div>
                 <div class="free-text">
                     <h3>Do‘stlarni taklif eting</h3>
                     <p>Har bir taklif uchun 10 ta bepul limit</p>
@@ -412,17 +412,17 @@
 
         <!-- REFERAL PANEL (dastlab yashirin) -->
         <div class="referal-panel" id="referalPanel">
-            <div class="referal-title"><i class="fa-regular fa-share-nodes"></i> Referal tizimi</div>
+            <div class="referal-title"><i class="fa-solid fa-share-nodes"></i> Referal tizimi</div>
             <div class="referal-link">
                 <span class="link-text">https://t.me/ravon_ai_bot?ref=AZBEK23</span>
-                <button class="copy-btn" id="copyLinkBtn"><i class="fa-regular fa-copy"></i> Nusxa</button>
+                <button class="copy-btn" id="copyLinkBtn"><i class="fa-solid fa-copy"></i> Nusxa</button>
             </div>
             <div class="referal-stats">
-                <div class="stat-badge"><i class="fa-regular fa-user-plus"></i> 8 do‘st</div>
-                <div class="stat-badge"><i class="fa-regular fa-bolt"></i> 80 limit</div>
+                <div class="stat-badge"><i class="fa-solid fa-user-plus"></i> 8 do‘st</div>
+                <div class="stat-badge"><i class="fa-solid fa-bolt"></i> 80 limit</div>
             </div>
             <div style="color:#003f77; background:#e2edff; border-radius:30px; padding:14px; text-align:center;">
-                <i class="fa-regular fa-circle-info"></i> Taklif qilgan har bir do‘stingizga ham 5 limit beriladi
+                <i class="fa-solid fa-circle-info"></i> Taklif qilgan har bir do‘stingizga ham 5 limit beriladi
             </div>
             <div style="margin-top:16px;">
                 <button class="buy-btn" style="background:#d97917; width:100%;">Batafsil ko‘rsatkichlar</button>
@@ -431,7 +431,7 @@
 
         <!-- backend tayyorligi eslatmasi -->
         <div class="dummy-note">
-            <i class="fa-regular fa-database"></i> statik maʼlumot · backendga moslanadi
+            <i class="fa-solid fa-database"></i> statik maʼlumot · backendga moslanadi
         </div>
     </div>
 

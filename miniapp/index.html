@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uz">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
@@ -47,15 +47,15 @@
             padding-left: 8px;
         }
         .greeting i {
-            font-size: 32px;
+            font-size: 28px;
             color: #1e3c72;
             background: rgba(255,255,255,0.5);
-            width: 52px;
-            height: 52px;
+            width: 46px;
+            height: 46px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 28px;
+            border-radius: 26px;
             box-shadow: 0 6px 12px rgba(0,40,80,0.1);
             backdrop-filter: blur(4px);
         }
@@ -112,14 +112,14 @@
 
         /* ikonka doirasi — haqiqiy icon */
         .icon-bg {
-            width: 48px;
-            height: 48px;
+            width: 42px;
+            height: 42px;
             background: rgba(255, 255, 255, 0.9);
-            border-radius: 30px;
+            border-radius: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 26px;
+            font-size: 22px;
             color: #1e3c72;
             box-shadow: 0 8px 16px -6px rgba(0, 70, 120, 0.2), inset 0 -1px 0 rgba(0,0,0,0.02);
             transition: transform 0.2s ease, box-shadow 0.3s, background 0.2s;
@@ -130,7 +130,7 @@
         .btn-text {
             flex: 1;
             font-weight: 590;
-            font-size: 17px;
+            font-size: 16px;
             letter-spacing: -0.2px;
             line-height: 1.35;
             display: flex;
@@ -175,7 +175,9 @@
         .menu-btn:active {
             transform: scale(0.985) translateY(0px);
             transition: all 0.1s;
-            background: rgba(236, 74, 74, 0.95);
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(255, 255, 255, 1);
+            box-shadow: 0 10px 18px -10px rgba(12, 60, 120, 0.25);
         }
 
         /* har bir tugma uchun maxsus ikon ranglari (ixtiyoriy) */
@@ -191,8 +193,15 @@
 
         /* juda kichik ekranlar */
         @media (max-width: 360px) {
-            .btn-text { font-size: 15px; }
-            .icon-bg { width: 44px; height: 44px; font-size: 22px; }
+            .btn-text { font-size: 14px; }
+            .icon-bg { width: 38px; height: 38px; font-size: 20px; }
+        }
+        @media (max-width: 320px) {
+            .menu-screen { border-radius: 36px; padding: 18px 12px 22px; }
+            .greeting i { width: 40px; height: 40px; font-size: 24px; }
+            .btn-text { font-size: 13px; }
+            .btn-sub { font-size: 12px; }
+            .icon-bg { width: 36px; height: 36px; font-size: 18px; }
         }
 
         /* umuman olib tashlangan header yoki footer yo‘q */
@@ -211,7 +220,7 @@
     <div class="menu-screen">
         <!-- salomlashuv (kutilganidek, kerakli tugmalarni to‘ldiradi) -->
         <div class="greeting">
-            <i class="fa-regular fa-hand-peace"></i>
+            <i class="fa-solid fa-hand-peace"></i>
             <div class="greeting-text">
                 Salom! <small>yangi imkoniyatlar Ravon AI</small>
             </div>
@@ -235,13 +244,13 @@
 
             <!-- 4️⃣ Profil -->
             <a href="profile.html" class="menu-btn" aria-label="Profil">
-                <span class="icon-bg"><i class="fa-regular fa-user"></i></span>
+                <span class="icon-bg"><i class="fa-solid fa-user"></i></span>
                 <span class="btn-text">Profil</span>
             </a>
 
             <!-- 5️⃣ Tariflar | Ko‘proq foyda olish -->
             <a href="tarif.html" class="menu-btn" aria-label="Tariflar">
-                <span class="icon-bg"><i class="fa-regular fa-gem"></i></span>
+                <span class="icon-bg"><i class="fa-solid fa-gem"></i></span>
                 <span class="btn-text">
                     Tariflar
                     <span class="btn-sub">Ko‘proq foyda olish</span>
@@ -250,7 +259,7 @@
 
             <!-- 6️⃣ Bot qanday ishlaydi? -->
             <a href="botqanday.html" class="menu-btn" aria-label="Bot qanday ishlaydi">
-                <span class="icon-bg"><i class="fa-regular fa-circle-question"></i></span>
+                <span class="icon-bg"><i class="fa-solid fa-circle-question"></i></span>
                 <span class="btn-text">Bot qanday ishlaydi?</span>
             </a>
 
@@ -263,7 +272,6 @@
     </div>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script>
         (function () {
             const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;

@@ -109,12 +109,12 @@
             align-items: flex-start;
         }
         .info-row i {
-            font-size: clamp(20px, 5vw, 28px);
+            font-size: clamp(18px, 4.5vw, 26px);
             color: #004c99;
             background: rgba(255,255,255,0.7);
-            width: clamp(40px, 10vw, 54px);
-            height: clamp(40px, 10vw, 54px);
-            border-radius: 30px;
+            width: clamp(36px, 9vw, 50px);
+            height: clamp(36px, 9vw, 50px);
+            border-radius: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -196,12 +196,13 @@
             background: rgba(255,255,255,0.8);
             border: 1.5px solid rgba(0,80,150,0.3);
             border-radius: 50px;
-            padding: 12px 0;
+            padding: 10px 0;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
             font-weight: 600;
+            font-size: 15px;
             color: #0d3f77;
             transition: all 0.2s;
             cursor: pointer;
@@ -232,12 +233,15 @@
         @media (max-width: 340px) {
             .phone-frame { border-radius: 36px; padding: 18px 14px 24px; }
             .tts-header { gap: 10px; }
-            .info-row i { width: 44px; height: 44px; font-size: 24px; }
+            .info-row i { width: 40px; height: 40px; font-size: 22px; }
             .info-content { font-size: 14px; }
             .stage-panel { min-height: 240px; padding: 16px 12px; }
             .audio-player { border-radius: 30px; padding: 14px; gap: 12px; }
-            .audio-player i { width: 50px; height: 50px; font-size: 28px; }
+            .audio-player i { width: 46px; height: 46px; font-size: 26px; }
             .fake-button { padding: 8px 16px; }
+        }
+        @media (max-width: 320px) {
+            .voice-option { font-size: 14px; }
         }
 
         /* yuklash animatsiyasi */
@@ -273,12 +277,12 @@
             margin-top: 16px;
         }
         .audio-player i {
-            font-size: 40px;
+            font-size: 36px;
             color: #004c99;
             background: white;
-            width: 60px;
-            height: 60px;
-            border-radius: 40px;
+            width: 52px;
+            height: 52px;
+            border-radius: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -327,7 +331,7 @@
     <div class="phone-frame">
         <!-- header -->
         <div class="tts-header">
-            <div class="back-btn" id="backBtn"><i class="fas fa-arrow-left"></i></div>
+            <div class="back-btn" id="backBtn"><i class="fa-solid fa-arrow-left"></i></div>
             <div class="header-title">
                 <i class="fa-solid fa-waveform"></i> Matnni ovozga aylantirish
             </div>
@@ -396,7 +400,7 @@
                                 <div class="play-btn"><i class="fa-solid fa-headphones"></i> Tingla</div>
                             </div>
                             <div style="margin-top: 18px; color:#0f4e7a; display:flex; gap:10px; justify-content:center;">
-                                <i class="fa-regular fa-circle-down"></i> Yuklab olish (backend bog‘lanadi)
+                                <i class="fa-solid fa-download"></i> Yuklab olish (backend bog‘lanadi)
                             </div>
                         </div>
                     </div>

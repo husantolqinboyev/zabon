@@ -121,14 +121,14 @@
         }
 
         .choice-icon {
-            width: clamp(48px, 12vw, 64px);
-            height: clamp(48px, 12vw, 64px);
+            width: clamp(44px, 10vw, 56px);
+            height: clamp(44px, 10vw, 56px);
             background: rgba(255, 255, 255, 0.9);
-            border-radius: 40px;
+            border-radius: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: clamp(22px, 6vw, 32px);
+            font-size: clamp(20px, 5.5vw, 28px);
             color: #0d3d77;
             box-shadow: 0 10px 18px -8px #103a62;
             flex-shrink: 0;
@@ -155,10 +155,10 @@
         .stage-panel {
             background: rgba(255, 255, 255, 0.5);
             backdrop-filter: blur(8px);
-            border-radius: 30px;
-            padding: clamp(14px, 4vw, 20px);
+            border-radius: 28px;
+            padding: clamp(12px, 3.5vw, 18px);
             border: 1px solid rgba(255,255,255,0.8);
-            margin-top: 16px;
+            margin-top: 14px;
             box-shadow: inset 0 2px 6px rgba(255,255,255,0.6), 0 8px 18px rgba(0,30,60,0.1);
             transition: all 0.3s;
         }
@@ -175,12 +175,12 @@
             align-items: flex-start;
         }
         .info-row i {
-            font-size: clamp(18px, 5vw, 26px);
+            font-size: clamp(16px, 4.5vw, 24px);
             color: #004c99;
             background: rgba(255,255,255,0.7);
-            width: clamp(38px, 10vw, 48px);
-            height: clamp(38px, 10vw, 48px);
-            border-radius: 30px;
+            width: clamp(34px, 9vw, 44px);
+            height: clamp(34px, 9vw, 44px);
+            border-radius: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -261,7 +261,7 @@
             border: 2px dashed #9bbce0;
         }
         .random-word {
-            font-size: 42px;
+            font-size: 34px;
             font-weight: 700;
             color: #003d75;
             letter-spacing: 2px;
@@ -338,23 +338,27 @@
             .talaffuz-header { gap: 12px; margin-bottom: 20px; }
             .header-title { font-size: 20px; }
             .choice-card { border-radius: 30px; padding: 16px 14px; gap: 12px; }
-            .choice-icon { width: 54px; height: 54px; font-size: 28px; }
+            .choice-icon { width: 50px; height: 50px; font-size: 24px; }
             .choice-text { font-size: 16px; }
             .choice-text small { font-size: 12px; }
             .stage-panel { border-radius: 30px; padding: 16px 14px; }
-            .info-row i { width: 40px; height: 40px; font-size: 22px; }
+            .info-row i { width: 36px; height: 36px; font-size: 20px; }
             .info-content { font-size: 14px; }
             .input-sim { border-radius: 24px; padding: 12px 14px; }
             .fake-button { padding: 8px 14px; font-size: 14px; }
-            .random-word { font-size: 32px; }
+            .random-word { font-size: 28px; }
             .rec-btn { padding: 10px 16px; }
             .timer { padding: 6px 10px; font-size: 12px; }
         }
         @media (max-width: 340px) {
-            .choice-icon { width: 50px; height: 50px; }
+            .choice-icon { width: 46px; height: 46px; }
             .choice-text { font-size: 15px; }
             .rec-btn { flex: 1 1 120px; }
             .timer { flex: 1 1 80px; }
+        }
+        @media (max-width: 320px) {
+            .choice-text { font-size: 14px; }
+            .random-word { font-size: 24px; }
         }
     </style>
 </head>
@@ -362,7 +366,7 @@
     <div class="phone-frame">
         <!-- sarlavha qismi -->
         <div class="talaffuz-header">
-            <a href="#" class="back-btn" onclick="history.back(); return false;" style="cursor:pointer;"><i class="fas fa-arrow-left"></i></a>
+            <a href="#" class="back-btn" onclick="history.back(); return false;" style="cursor:pointer;"><i class="fa-solid fa-arrow-left"></i></a>
             <div class="header-title">
                 <i class="fa-solid fa-microphone-lines"></i> Talaffuz tekshirish
             </div>
@@ -448,7 +452,7 @@
                             </div>
                         </div>
                         <div style="margin-top:16px; display:flex; gap:10px; align-items:center;">
-                            <i class="fa-solid fa-head-side-virus" style="font-size:24px;"></i>
+                            <i class="fa-solid fa-microphone" style="font-size:24px;"></i>
                             <span style="background:#fff; border-radius:40px; padding:12px 18px; flex:1; border:1px solid #acc9e7;">
                                 🎤 Ovozli xabar yuborish
                             </span>
