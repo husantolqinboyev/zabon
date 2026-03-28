@@ -508,8 +508,10 @@ const startBot = async (retries = 5) => {
     const server = app.listen(PORT, '0.0.0.0', () => {
         console.log(`📡 Health check and Mini App server listening on port ${PORT}`);
 
-        const pingInterval = setInterval(() => {
+        const pingInterval = setInterval(async () => {
             console.log(`[Keep-Alive] Starting ping sequence at ${new Date().toISOString()}`);
+            
+            // 1. Local Ping
             const localUrl = `http://127.0.0.1:${PORT}/ping`;
             http.get(localUrl, (res) => {
                 console.log(`[Keep-Alive] Local Ping ${localUrl}: ${res.statusCode}`);
@@ -517,22 +519,39 @@ const startBot = async (retries = 5) => {
                 console.error(`[Keep-Alive] Local Ping ${localUrl} error: ${err.message}`);
             });
 
+            // 2. Render External Ping (Hardcoded for stability)
+            const renderUrl = 'https://zabon.onrender.com/ping';
+            https.get(renderUrl, (res) => {
+                console.log(`[Keep-Alive] Render External Ping ${renderUrl}: ${res.statusCode}`);
+            }).on('error', (err) => {
+                console.error(`[Keep-Alive] Render External Ping ${renderUrl} error: ${err.message}`);
+            });
+
+            // 3. Supabase Activity (Prevent Supabase pausing)
+            try {
+                const { data, error } = await database.supabase
+                    .from('users')
+                    .select('count', { count: 'exact', head: true });
+                if (error) throw error;
+                console.log(`[Keep-Alive] Supabase activity check: OK`);
+            } catch (dbErr) {
+                console.error(`[Keep-Alive] Supabase activity check error: ${dbErr.message}`);
+            }
+
+            // 4. Config-based Ping (if exists and different from renderUrl)
             const base = config.PING_URL || config.APP_URL || '';
             let target = base;
             if (base && !base.startsWith('http')) target = `https://${base}`;
-            if (target) {
+            if (target && !target.includes('zabon.onrender.com')) {
                 const client = target.startsWith('https') ? https : http;
                 const pingTarget = target.endsWith('/') ? `${target}ping` : `${target}/ping`;
-                console.log(`[Keep-Alive] External Ping target: ${pingTarget}`);
                 client.get(pingTarget, (res) => {
-                    console.log(`[Keep-Alive] External Ping ${pingTarget}: ${res.statusCode}`);
+                    console.log(`[Keep-Alive] Config Ping ${pingTarget}: ${res.statusCode}`);
                 }).on('error', (err) => {
-                    console.error(`[Keep-Alive] External Ping ${pingTarget} error: ${err.message}`);
+                    console.error(`[Keep-Alive] Config Ping ${pingTarget} error: ${err.message}`);
                 });
-            } else {
-                console.log('[Keep-Alive] No external APP_URL/PING_URL found for pinging.');
             }
-        }, 2 * 60 * 1000); // 2 minutes to be very aggressive against sleeping
+        }, 2 * 60 * 1000); // 2 minutes aggressive keep-alive
 
         // Store interval to clear it later
         process.on('shutdown', () => clearInterval(pingInterval));
