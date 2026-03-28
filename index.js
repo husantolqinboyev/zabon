@@ -520,13 +520,14 @@ const startBot = async (retries = 5) => {
             if (base && !base.startsWith('http')) target = `https://${base}`;
             if (target) {
                 const client = target.startsWith('https') ? https : http;
-                client.get(`${target}/ping`, (res) => {
-                    console.log(`Ping ${target}/ping: ${res.statusCode}`);
+                const pingTarget = target.endsWith('/') ? `${target}ping` : `${target}/ping`;
+                client.get(pingTarget, (res) => {
+                    console.log(`Ping ${pingTarget}: ${res.statusCode}`);
                 }).on('error', (err) => {
-                    console.error(`Ping ${target}/ping error: ${err.message}`);
+                    console.error(`Ping ${pingTarget} error: ${err.message}`);
                 });
             }
-        }, 10 * 60 * 1000);
+        }, 5 * 60 * 1000);
 
         // Store interval to clear it later
         process.on('shutdown', () => clearInterval(pingInterval));
