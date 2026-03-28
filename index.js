@@ -509,25 +509,30 @@ const startBot = async (retries = 5) => {
         console.log(`📡 Health check and Mini App server listening on port ${PORT}`);
 
         const pingInterval = setInterval(() => {
+            console.log(`[Keep-Alive] Starting ping sequence at ${new Date().toISOString()}`);
             const localUrl = `http://127.0.0.1:${PORT}/ping`;
             http.get(localUrl, (res) => {
-                console.log(`Ping ${localUrl}: ${res.statusCode}`);
+                console.log(`[Keep-Alive] Local Ping ${localUrl}: ${res.statusCode}`);
             }).on('error', (err) => {
-                console.error(`Ping ${localUrl} error: ${err.message}`);
+                console.error(`[Keep-Alive] Local Ping ${localUrl} error: ${err.message}`);
             });
+
             const base = config.PING_URL || config.APP_URL || '';
             let target = base;
             if (base && !base.startsWith('http')) target = `https://${base}`;
             if (target) {
                 const client = target.startsWith('https') ? https : http;
                 const pingTarget = target.endsWith('/') ? `${target}ping` : `${target}/ping`;
+                console.log(`[Keep-Alive] External Ping target: ${pingTarget}`);
                 client.get(pingTarget, (res) => {
-                    console.log(`Ping ${pingTarget}: ${res.statusCode}`);
+                    console.log(`[Keep-Alive] External Ping ${pingTarget}: ${res.statusCode}`);
                 }).on('error', (err) => {
-                    console.error(`Ping ${pingTarget} error: ${err.message}`);
+                    console.error(`[Keep-Alive] External Ping ${pingTarget} error: ${err.message}`);
                 });
+            } else {
+                console.log('[Keep-Alive] No external APP_URL/PING_URL found for pinging.');
             }
-        }, 5 * 60 * 1000);
+        }, 2 * 60 * 1000); // 2 minutes to be very aggressive against sleeping
 
         // Store interval to clear it later
         process.on('shutdown', () => clearInterval(pingInterval));

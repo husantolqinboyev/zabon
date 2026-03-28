@@ -28,7 +28,7 @@ module.exports = {
     SUPABASE_URL: process.env.SUPABASE_URL,
     SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
-    APP_URL: (process.env.APP_URL || process.env.PING_URL || '').replace(/`/g, ''),
-    PING_URL: (process.env.PING_URL || process.env.APP_URL || '').replace(/`/g, ''),
+    APP_URL: (process.env.APP_URL || process.env.PING_URL || '').replace(/[`\s]/g, ''),
+    PING_URL: (process.env.PING_URL || process.env.APP_URL || '').replace(/[`\s]/g, ''),
     ALLOW_UNVERIFIED: String(process.env.ALLOW_UNVERIFIED || '').toLowerCase() === 'true'
 };
