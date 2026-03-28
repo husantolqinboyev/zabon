@@ -27,28 +27,35 @@ class GeminiService {
             const prompt = `
                 ${langConfig.instruction}
                 ${contextInstruction}
-                You are a world-class Language Proficiency Assessor. Analyze the audio with absolute precision.
+                You are a world-class Language Proficiency Assessor specializing in ${langConfig.name}. 
+                Analyze the audio with absolute precision and give a score based on REAL proficiency, not just effort.
+                
                 IMPORTANT: Feedback MUST be in UZBEK. Transcription/IPA in ${langConfig.name}.
                 
-                Scoring Guidelines (0-100):
-                - Be CRITICAL and HONEST. If the pronunciation is perfect, give 95-100. If it's poor, give 30-50. Do NOT use default or average scores like 65 or 70 every time.
-                - Phonetic Accuracy: Precision of sounds.
-                - Oral Fluency: Speech rate, fillers ("uh", "um"), and pauses ("...").
-                - Prosody: Rhythm, stress, and intonation.
-                - Word Accuracy: Percentage of correctly spoken words.
-                - Intelligibility: How easy it is for a native speaker to understand.
+                SCORING SYSTEM (0-100):
+                - 90-100: Native-like. Perfect pronunciation, rhythm, and clarity.
+                - 75-89: Very good. Small errors that don't affect understanding.
+                - 55-74: Good. Noticeable accent/errors, but mostly understandable.
+                - 30-54: Poor. Many errors, hard to understand.
+                - 0-29: Unintelligible or wrong language.
+                
+                CRITICAL WARNING: 
+                - Do NOT default to middle scores (60-70). 
+                - If the user is speaking the WRONG LANGUAGE (e.g., Uzbek instead of ${langConfig.name}), the score MUST be below 20.
+                - Be extremely strict with non-native speakers. If sounds are incorrect, reflect it in the score immediately.
+                - Each score (accuracy, fluency, prosody) must be evaluated independently.
 
                 Return ONLY a valid JSON object:
                 {
-                    "overallScore": number (calculated average),
-                    "accuracyScore": number,
-                    "fluencyScore": number,
-                    "prosodyScore": number,
-                    "completenessScore": number,
-                    "wordAccuracy": number,
-                    "ipa": "IPA transcription",
+                    "overallScore": number (weighted average),
+                    "accuracyScore": number (phonetic precision),
+                    "fluencyScore": number (speed and smoothness),
+                    "prosodyScore": number (rhythm and stress),
+                    "completenessScore": number (how much of the target text was said),
+                    "wordAccuracy": number (percentage of correctly pronounced words),
+                    "ipa": "IPA transcription for ${langConfig.name}",
                     "stressExample": "STRESS patterns",
-                    "transcription": "Verbatim transcription with fillers and pauses",
+                    "transcription": "Verbatim transcription in ${langConfig.name}",
                     "englishLevel": "CEFR Level (e.g., A1, B2, C1)",
                     "detailedFeedback": {
                         "strengths": ["at least 2 specific strengths in UZBEK"],
