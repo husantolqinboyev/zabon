@@ -11,7 +11,8 @@ class AssessmentService {
             }
 
             // Step 1: Analyze audio with Gemini
-            const assessment = await geminiService.analyzeAudio(audioBuffer, mimeType, type, targetText);
+            const targetLang = await database.getUserLanguage(user.id);
+            const assessment = await geminiService.analyzeAudio(audioBuffer, mimeType, type, targetText, targetLang);
 
             // Log API usage if available
             if (assessment._usage) {
@@ -74,6 +75,11 @@ class AssessmentService {
         const wordCount = assessment.targetText ? assessment.targetText.trim().split(/\s+/).length : 0;
         const isWordAnalysis = wordCount > 0 && wordCount <= 2;
 
+        const constants = require('../constants');
+        const targetLang = assessment.targetLang || 'en';
+        const langConfig = constants.SUPPORTED_LANGUAGES[targetLang] || constants.SUPPORTED_LANGUAGES.en;
+        const langName = langConfig.name.toUpperCase();
+
         if (type === 'compare') {
             if (isWordAnalysis) {
                 return this.formatWordAssessmentResponse(assessment);
@@ -82,14 +88,14 @@ class AssessmentService {
             }
         }
 
-        let response = `📊 *PROFESSIONAL TALAFFUZ TAHLILI*\n`;
+        let response = `📊 *${langName} TALAFFUZ TAHLILI*\n`;
         if (type === 'test') response = `🎯 *TALAFFUZ TESTI NATIJASI*\n`;
         if (type === 'compare') response = `📝 *MATN VA AUDIO TAQQOSLASH*\n`;
 
         response += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
         response += `🏆 *UMUMIY NATIJA: ${assessment.overallScore}/100*\n`;
-        response += `🎓 *DARAJA: ${assessment.englishLevel}*\n\n`;
+        response += `🎓 *DARAJA: ${assessment.englishLevel || assessment.level || 'Aniqlanmadi'}*\n\n`;
 
         response += `📝 *KO'RSATKICHLAR:*\n`;
         response += `🎯 Talaffuz aniqligi: *${assessment.accuracyScore}%*\n`;
@@ -133,7 +139,7 @@ class AssessmentService {
         feedback.actionPlan.slice(0, 3).forEach(p => response += `🚀 ${p}\n`);
 
         response += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-        response += `_Ravon AI • Professional Tahlil_`;
+        response += `_Zabon AI • Professional Tahlil_`;
 
         return response;
     }

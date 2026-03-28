@@ -1,8 +1,8 @@
-# Ravon AI Web - Ingliz tili talaffuzini baholash web sayti
+# Zabon AI Web - Ingliz tili talaffuzini baholash web sayti
 
 ## 🎯 Web sayt asosiy vazifasi
 
-Ravon AI - bu Telegram orqali ishlaydigan, ingliz tili talaffuzini avtomatik baholaydigan zamonaviy sun'iy intellekt asosidagi dastur. web sayt foydalanuvchilarning inglizcha so'zlar va gaplarni to'g'ri talaffuz qilishlarini yordam beradi.
+Zabon AI - bu Telegram orqali ishlaydigan, ingliz tili talaffuzini avtomatik baholaydigan zamonaviy sun'iy intellekt asosidagi dastur. web sayt foydalanuvchilarning inglizcha so'zlar va gaplarni to'g'ri talaffuz qilishlarini yordam beradi.
 
 ## 🚀 Asosiy imkoniyatlar
 
@@ -171,7 +171,7 @@ Ravon AI - bu Telegram orqali ishlaydigan, ingliz tili talaffuzini avtomatik bah
 
 ## 📞 Aloqa
 
-- **Bot:** @ravonaiweb_bot
+- **Bot:** @zabonaiweb_bot
 - **Kanal:** @englishwithSanatbek
 - **Admin:** @khamidovsanat
 

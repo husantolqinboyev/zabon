@@ -46,15 +46,23 @@ class TtsService {
         const filePath = path.join(this.tempDir, fileName);
 
         try {
-            const cleanText = text.replace(/[^\w\s.,!?'-]/g, '').trim();
+            const cleanText = text.trim();
             if (!cleanText) {
                 throw new Error('No valid text for TTS generation');
             }
 
-            if (voice && typeof voice === 'string' && voice.startsWith('en-')) {
+            const constants = require('../constants');
+            let ttsVoice = voice;
+            
+            // If no specific voice provided, use the default for the language
+            if (!ttsVoice && constants.SUPPORTED_LANGUAGES[lang]) {
+                ttsVoice = constants.SUPPORTED_LANGUAGES[lang].voice;
+            }
+
+            if (ttsVoice) {
                 try {
                     const tts = new MsEdgeTTS();
-                    await tts.setVoice(voice);
+                    await tts.setVoice(ttsVoice);
                     const buffer = await tts.toBuffer(cleanText, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
                     await fs.writeFile(filePath, buffer);
                     return filePath;
@@ -63,7 +71,7 @@ class TtsService {
                 }
             }
 
-            await this.generateGoogleAudio(cleanText, filePath, 'en');
+            await this.generateGoogleAudio(cleanText, filePath, lang);
             return filePath;
         } catch (error) {
             console.error('Google TTS generation error:', error.message);
@@ -74,7 +82,7 @@ class TtsService {
     async generateGoogleAudio(text, filePath, lang = 'en') {
         try {
             // Clean text for TTS
-            const cleanText = text.replace(/[^\w\s.,!?'-]/g, '').trim();
+            const cleanText = text.trim();
             
             if (!cleanText) {
                 throw new Error('No valid text for TTS generation');
@@ -138,7 +146,7 @@ class TtsService {
     async generateFallbackAudio(text, filePath, lang = 'en') {
         try {
             // Use a different host or approach as fallback
-            const cleanText = text.replace(/[^\w\s.,!?'-]/g, '').trim();
+            const cleanText = text.trim();
             
             if (!cleanText) {
                 throw new Error('No valid text for fallback TTS');

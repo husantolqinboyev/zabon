@@ -17,7 +17,7 @@ class PdfService {
             linux_regular: '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
             linux_bold: '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
         };
-        this.channelUrl = 'https://t.me/englishwithSanatbek';
+        this.channelUrl = 'https://t.me/zabonai';
     }
 
     async generateQRCodeBuffer(text) {
@@ -156,7 +156,7 @@ class PdfService {
                 doc.fillColor(colors.text)
                    .font(boldFont)
                    .fontSize(18)
-                   .text('ravon_ai bot', 0, 40, { align: 'center' });
+                   .text('zabon_ai bot', 0, 40, { align: 'center' });
                 doc.fontSize(8)
                    .font(mainFont)
                    .text('TALAFUZNI PROFESIONAL TAHLILI', 0, 60, { align: 'center' });

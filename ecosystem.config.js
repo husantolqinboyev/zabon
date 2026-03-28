@@ -1,6 +1,6 @@
 module.exports = {
   apps: [{
-    name: 'ravon-bot',
+    name: 'zabon-bot',
     script: 'index.js',
     instances: 1,
     autorestart: true,

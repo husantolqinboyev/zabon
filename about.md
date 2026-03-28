@@ -1,4 +1,4 @@
-# ravon_ai bot 🚀
+# zabon_ai bot 🚀
 
 Ushbu loyiha foydalanuvchilarning ingliz tili talaffuzini sun'iy intellekt yordamida tahlil qilish va yaxshilash uchun mo'ljallangan Telegram bot hisoblanadi.
 

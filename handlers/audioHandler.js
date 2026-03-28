@@ -205,7 +205,7 @@ class AudioHandler {
                     "🔗 *Sizning referal havolangiz:*\n" +
                     `\`${referralLink}\``;
 
-                const shareLink = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent("Ingliz tili talaffuzini Ravon AI yordamida bepul tahlil qiling! 🚀")}`;
+                const shareLink = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent("Ingliz tili talaffuzini Zabon AI yordamida bepul tahlil qiling! 🚀")}`;
 
                 await ctx.replyWithMarkdown(errorMessage, Markup.inlineKeyboard([
                     [Markup.button.url('📤 Do\'stlarga ulashish', shareLink)],
@@ -213,9 +213,9 @@ class AudioHandler {
                 ]));
                 return;
             } else if (error.response?.status === 429 || error.message.includes('429')) {
-                errorMessage = "⚠️ Ravon AI limiti tugadi. Iltimos, birozdan keyin qayta urinib ko'ring.";
+                errorMessage = "⚠️ Zabon AI limiti tugadi. Iltimos, birozdan keyin qayta urinib ko'ring.";
             } else if (error.response?.status === 401 || error.message.includes('401')) {
-                errorMessage = "⚠️ Ravon API kaliti bilan muammo yuz berdi.";
+                errorMessage = "⚠️ Zabon API kaliti bilan muammo yuz berdi.";
             }
 
             await ctx.reply(errorMessage);
@@ -274,7 +274,8 @@ class AudioHandler {
             await ctx.reply(`Matn qabul qilindi (${limitCheck.wordCount}/${limitCheck.limit} so'z). Audio tayyorlanmoqda... ⏳`);
 
             try {
-                const audioPath = await ttsService.generateAudio(text, 'en');
+                const targetLang = await database.getUserLanguage(ctx.from.id);
+                const audioPath = await ttsService.generateAudio(text, targetLang);
 
                 await ctx.replyWithAudio({ source: audioPath });
 
@@ -291,8 +292,10 @@ class AudioHandler {
         }
 
         if (state === 'waiting_for_new_test_word') {
-            await database.addTestWord(text);
+            const targetLang = ctx.session.manualAddLang || await database.getUserLanguage(ctx.from.id);
+            await database.addTestWord(text, 'medium', targetLang);
             delete ctx.session.state;
+            delete ctx.session.manualAddLang;
             const isLong = text.trim().split(/\s+/).length > 2;
             const typeText = isLong ? 'Matn' : 'So\'z';
             return ctx.reply(`✅ ${typeText} muvaffaqiyatli qo'shildi!`);

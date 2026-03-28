@@ -105,11 +105,11 @@ class Database {
         }
     }
 
-    async getUserVoice(telegramId) {
+    async getUserLanguage(telegramId) {
         try {
             const { data, error } = await this.supabase
                 .from('users')
-                .select('tts_voice')
+                .select('target_lang')
                 .eq('telegram_id', telegramId)
                 .single();
 
@@ -117,7 +117,45 @@ class Database {
                 throw error;
             }
 
-            return data ? data.tts_voice : 'en-US-AriaNeural';
+            return data ? data.target_lang : null;
+        } catch (error) {
+            console.error('Error getting user language:', error);
+            return null;
+        }
+    }
+
+    async setUserLanguage(telegramId, lang) {
+        try {
+            const { error } = await this.supabase
+                .from('users')
+                .update({ target_lang: lang })
+                .eq('telegram_id', telegramId);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error setting user language:', error);
+            throw error;
+        }
+    }
+
+    async getUserVoice(telegramId) {
+        try {
+            const { data, error } = await this.supabase
+                .from('users')
+                .select('tts_voice, target_lang')
+                .eq('telegram_id', telegramId)
+                .single();
+
+            if (error && error.code !== 'PGRST116') {
+                throw error;
+            }
+
+            if (data && data.tts_voice) return data.tts_voice;
+            
+            // Fallback: get default voice for user's target language
+            const constants = require('./constants');
+            const targetLang = data ? data.target_lang || 'en' : 'en';
+            return constants.SUPPORTED_LANGUAGES[targetLang]?.voice || 'en-US-AriaNeural';
         } catch (error) {
             console.error('Error getting user voice:', error);
             return 'en-US-AriaNeural';
@@ -296,28 +334,34 @@ class Database {
         }
     }
 
-    async addTestWord(word, difficulty = 'medium') {
+    async addTestWord(word, difficulty = 'medium', lang = 'en') {
         try {
             const { data, error } = await this.supabase
                 .from('test_words')
-                .insert({ word, difficulty })
+                .insert({ word, difficulty, lang })
                 .select()
                 .single();
 
-            if (error) throw error;
-            return data.id;
+            if (error) {
+                if (error.code === '23505') { // Unique constraint
+                    return null;
+                }
+                throw error;
+            }
+            return data;
         } catch (error) {
             console.error('Error adding test word:', error);
             throw error;
         }
     }
 
-    async getRandomTestWord() {
+    async getRandomTestWord(lang = 'en') {
         try {
             // First get a random row by using RPC or getting count and offset
             const { count, error: countError } = await this.supabase
                 .from('test_words')
-                .select('*', { count: 'exact', head: true });
+                .select('*', { count: 'exact', head: true })
+                .eq('lang', lang);
 
             if (countError) throw countError;
             if (count === 0) return null;
@@ -326,6 +370,7 @@ class Database {
             const { data, error } = await this.supabase
                 .from('test_words')
                 .select('*')
+                .eq('lang', lang)
                 .range(randomOffset, randomOffset)
                 .single();
 
@@ -337,22 +382,18 @@ class Database {
         }
     }
 
-    async getRandomTestWordByType(type) {
+    async getRandomTestWordByType(type, lang = 'en') {
         try {
             // Define filter logic
             const isWord = type === 'word';
 
             // First get count of filtered rows
             let query = this.supabase.from('test_words').select('*', { count: 'exact', head: true });
+            query = query.eq('lang', lang);
 
             if (isWord) {
-                // Word: either no space OR exactly 1 space (2 words max)
-                // Using a more reliable logic for Supabase: word should not have more than 1 space
-                // But for simplicity and matching the existing logic, we'll try to get all and filter if needed,
-                // OR use multiple ilike patterns.
                 query = query.or('word.not.ilike.% % %,word.not.ilike.% % % %');
             } else {
-                // Text: must have at least 2 spaces (3 words or more)
                 query = query.ilike('word', '% % %');
             }
 
@@ -363,7 +404,7 @@ class Database {
             // Get a random row from filtered results
             const randomOffset = Math.floor(Math.random() * count);
 
-            let finalQuery = this.supabase.from('test_words').select('*');
+            let finalQuery = this.supabase.from('test_words').select('*').eq('lang', lang);
             if (isWord) {
                 finalQuery = finalQuery.or('word.not.ilike.% % %,word.not.ilike.% % % %');
             } else {
@@ -382,11 +423,12 @@ class Database {
         }
     }
 
-    async getRecentTestWords(limit = 20) {
+    async getRecentTestWords(limit = 20, lang = 'en') {
         try {
             const { data, error } = await this.supabase
                 .from('test_words')
                 .select('*')
+                .eq('lang', lang)
                 .order('created_at', { ascending: false })
                 .limit(limit);
 
@@ -398,10 +440,10 @@ class Database {
         }
     }
 
-    async getRecentTestWordsByType(type, limit = 50) {
+    async getRecentTestWordsByType(type, limit = 50, lang = 'en') {
         try {
             const isWord = type === 'word';
-            let query = this.supabase.from('test_words').select('*');
+            let query = this.supabase.from('test_words').select('*').eq('lang', lang);
             if (isWord) {
                 query = query.or('word.not.ilike.% % %,word.not.ilike.% % % %');
             } else {
@@ -513,16 +555,21 @@ class Database {
             }
 
             if (existingUser) {
-                // Update existing user
+                const updateData = {
+                    username: userData.username,
+                    first_name: userData.first_name,
+                    last_name: userData.last_name,
+                    language_code: userData.language_code,
+                    last_active: new Date().toISOString()
+                };
+
+                if (userData.target_lang) {
+                    updateData.target_lang = userData.target_lang;
+                }
+
                 const { error } = await this.supabase
                     .from('users')
-                    .update({
-                        username: userData.username,
-                        first_name: userData.first_name,
-                        last_name: userData.last_name,
-                        language_code: userData.language_code,
-                        last_active: new Date().toISOString()
-                    })
+                    .update(updateData)
                     .eq('telegram_id', userData.id);
 
                 if (error) throw error;
@@ -537,6 +584,7 @@ class Database {
                         first_name: userData.first_name,
                         last_name: userData.last_name,
                         language_code: userData.language_code,
+                        target_lang: userData.target_lang || null, // No default 'en'
                         referred_by: referrerId
                     })
                     .select()
@@ -896,6 +944,7 @@ class Database {
                     word_accuracy: assessmentData.wordAccuracy || 0,
                     transcription: assessmentData.transcription || '',
                     target_text: assessmentData.target_text || '',
+                    target_lang: assessmentData.target_lang || assessmentData.targetLang || 'en',
                     feedback: assessmentData.feedback || '',
                     english_level: assessmentData.englishLevel || ''
                 })

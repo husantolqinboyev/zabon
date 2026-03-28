@@ -1,4 +1,4 @@
--- Supabase database schema for Ravon AI Bot
+-- Supabase database schema for Zabon AI Bot
 -- Run this SQL in your Supabase SQL editor
 
 -- Enable UUID extension
@@ -178,13 +178,13 @@ CREATE TRIGGER update_bot_settings_updated_at
 
 -- Insert default tariffs
 INSERT INTO tariffs (name, price, duration_days, limit_per_day, word_limit) VALUES
-    ('Haftalik', 15000, 7, 50, 50),
-    ('Oylik', 32000, 30, 200, 80),
+    ('Haftalik', 9000, 7, 50, 50),
+    ('Oylik', 25000, 30, 200, 80),
     ('Yillik', 300000, 365, 1000, 80)
 ON CONFLICT DO NOTHING;
 
 -- Insert default bot settings
 INSERT INTO bot_settings (key, value) VALUES
-    ('card_number', '5614 6868 3029 9486'),
-    ('card_holder', 'Sanatbek Hamidov')
+    ('card_number', '4916 9903 2714 7028'),
+    ('card_holder', 'Tolqinboyev Xusan')
 ON CONFLICT (key) DO NOTHING;

@@ -18,6 +18,12 @@ const bot = new Telegraf(config.TELEGRAM_BOT_TOKEN);
 // Middleware
 bot.use(session());
 
+// Ensure session exists immediately after session middleware
+bot.use((ctx, next) => {
+    if (!ctx.session) ctx.session = {};
+    return next();
+});
+
 // Pre-flight validation for environment
 const validateEnvironment = async () => {
     const token = config.TELEGRAM_BOT_TOKEN;
@@ -47,10 +53,8 @@ const validateEnvironment = async () => {
     }
 };
 
-// Ensure session exists
+// Ensure user data is attached to context
 bot.use(async (ctx, next) => {
-    if (!ctx.session) ctx.session = {};
-
     // Ensure user exists in DB and attach to context
     if (ctx.from && !ctx.from.is_bot) {
         let user = await database.getUserByTelegramId(ctx.from.id);
@@ -79,12 +83,22 @@ bot.use(async (ctx, next) => {
         return commandHandler.handleBroadcastContent(ctx);
     }
 
-    // Skip check for Admin
+    // Skip check for Admin or Teacher
     const isAdmin = await database.isAdmin(userId);
-    if (isAdmin) return next();
+    const isTeacher = await database.isTeacher(userId);
+    if (isAdmin || isTeacher) return next();
 
     // Check Premium Status (handles expiry)
     await database.checkPremiumStatus(userId);
+
+    // Get user stats to check total usage
+    const stats = await database.getUserStats(userId);
+    const totalUsage = stats ? stats.total_assessments : 0;
+
+    // Only enforce subscription after 3 uses
+    if (totalUsage < 3) {
+        return next();
+    }
 
     try {
         const member = await ctx.telegram.getChatMember(config.REQUIRED_CHANNEL_ID, userId);
@@ -144,6 +158,7 @@ bot.hears('👤 Profil', (ctx) => commandHandler.handleProfile(ctx));
 bot.hears('💳 Tariflar | Ko\'proq foyda olish', (ctx) => commandHandler.handleTariffPlan(ctx));
 bot.hears('❓ Bot qanday ishlaydi?', (ctx) => commandHandler.handleHowItWorks(ctx));
 bot.hears('📱 Mini App', (ctx) => commandHandler.handleMiniApp(ctx));
+bot.hears('🌐 Tilni sozlash', (ctx) => commandHandler.handleLanguageMenu(ctx));
 bot.hears('🏠 Asosiy menyu', (ctx) => commandHandler.handleMainMenu(ctx));
 bot.hears('🔙 Asosiy menyu', (ctx) => commandHandler.handleMainMenu(ctx));
 
@@ -190,10 +205,17 @@ bot.action(/toggle_teacher_(\d+)_(0|1)/, (ctx) => commandHandler.handleToggleTea
 bot.action(/add_limit_(\d+)_(\d+)/, (ctx) => commandHandler.handleAddLimit(ctx));
 bot.action('admin_users_list', (ctx) => commandHandler.handleUsers(ctx));
 bot.action('show_referral_info', (ctx) => commandHandler.handleReferral(ctx));
+bot.action(/set_lang_(.+)/, (ctx) => commandHandler.handleSetLanguage(ctx));
+bot.action(/init_lang_(.+)/, (ctx) => commandHandler.handleInitialLangSelect(ctx));
 bot.action(/mat_(\d+)_(.+)/, (ctx) => commandHandler.handleManualTariffApply(ctx));
 
 // AI Generation actions
+bot.action(/ai_lang_(text|word)_(.+)/, (ctx) => commandHandler.handleAiLangSelect(ctx));
+bot.action(/ai_gen_(.+)_(.+)_(.+)/, (ctx) => commandHandler.handleAiGenerate(ctx));
+bot.action(/manual_add_lang_(.+)/, (ctx) => commandHandler.handleManualAddLangSelect(ctx));
 bot.action(/ai_generate_(easy|medium|hard)_(word|sentence|text)/, (ctx) => commandHandler.handleAiGenerate(ctx));
+bot.action('ai_word_gen', (ctx) => commandHandler.handleAiWordGeneration(ctx));
+bot.action('ai_text_gen', (ctx) => commandHandler.handleAiTextGeneration(ctx));
 bot.action('back_to_teacher_menu', (ctx) => commandHandler.handleTeacher(ctx));
 
 // Student management actions
@@ -232,6 +254,8 @@ bot.action('top_users', (ctx) => commandHandler.handleTopUsers(ctx));
 bot.action(/texts_page_(.+)/, (ctx) => commandHandler.handleTextsPage(ctx));
 bot.action('texts_type_word', (ctx) => commandHandler.handleTextsType(ctx));
 bot.action('texts_type_text', (ctx) => commandHandler.handleTextsType(ctx));
+bot.action('texts_change_lang', (ctx) => commandHandler.handleTextsChangeLang(ctx));
+bot.action(/texts_select_lang_(.+)/, (ctx) => commandHandler.handleTextsSelectLang(ctx));
 bot.action('cancel_texts_mgmt', (ctx) => commandHandler.handleCancelTexts(ctx));
 bot.action(/users_page_(.+)/, (ctx) => commandHandler.handleUsersPage(ctx));
 bot.action('users_type_free', (ctx) => commandHandler.handleUsersType(ctx));
@@ -478,7 +502,7 @@ const startBot = async (retries = 5) => {
         if (fs.existsSync(indexMini)) {
             return res.sendFile(indexMini);
         }
-        return res.send('Ravon AI API Server is running...');
+        return res.send('Zabon AI API Server is running...');
     });
 
     const server = app.listen(PORT, '0.0.0.0', () => {
@@ -518,7 +542,7 @@ const startBot = async (retries = 5) => {
 
     for (let i = 0; i < retries; i++) {
         try {
-            console.log(`🚀 Starting Preimum English AI bot... (Attempt ${i + 1}/${retries})`);
+            console.log(`🚀 Starting Zabon AI bot... (Attempt ${i + 1}/${retries})`);
 
             // Clear any existing webhook
             await bot.telegram.deleteWebhook({ drop_pending_updates: true });
@@ -535,15 +559,23 @@ const startBot = async (retries = 5) => {
 
             console.log('✅ Bot is running with polling!');
 
-            // Set Mini App menu button
-            await bot.telegram.setChatMenuButton({
-                menuButton: {
-                    type: 'web_app',
-                    text: '🚀 Ravon Web',
-                    web_app: { url: config.APP_URL }
-                }
-            });
-            console.log('✅ Mini App menu button set');
+            // Set Mini App menu button only if APP_URL is provided
+            if (config.APP_URL && config.APP_URL.trim() !== '') {
+                await bot.telegram.setChatMenuButton({
+                    menuButton: {
+                        type: 'web_app',
+                        text: '🚀 Zabon Web',
+                        web_app: { url: config.APP_URL }
+                    }
+                });
+                console.log('✅ Mini App menu button set');
+            } else {
+                console.log('⚠️ Mini App URL topilmadi, menyu tugmasi o‘rnatilmadi.');
+                // Optional: set a default button or clear existing one
+                await bot.telegram.setChatMenuButton({
+                    menuButton: { type: 'default' }
+                });
+            }
             return;
         } catch (err) {
             console.error(`❌ Launch error (Attempt ${i + 1}):`, err.message);

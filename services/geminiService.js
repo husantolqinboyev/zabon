@@ -8,12 +8,15 @@ class GeminiService {
             return;
         }
         this.apiKey = config.OPENROUTER_API_KEY;
-        this.modelName = config.OPENROUTER_MODEL || 'google/gemini-flash-1.5';
+        this.modelName = config.OPENROUTER_MODEL || 'google/gemini-2.0-flash-lite-001';
     }
 
-    async analyzeAudio(audioBuffer, mimeType, type = 'general', targetText = null, retryCount = 0) {
+    async analyzeAudio(audioBuffer, mimeType, type = 'general', targetText = null, targetLang = 'en', retryCount = 0) {
         try {
-            console.log(`Audio tahlili boshlandi: Mime: ${mimeType}, Hajm: ${audioBuffer.length} bytes`);
+            const constants = require('../constants');
+            const langConfig = constants.SUPPORTED_LANGUAGES[targetLang] || constants.SUPPORTED_LANGUAGES.en;
+            
+            console.log(`Audio tahlili boshlandi: Mime: ${mimeType}, Hajm: ${audioBuffer.length} bytes, Til: ${targetLang}`);
             let contextInstruction = "";
             if (type === 'test' && targetText) {
                 contextInstruction = `Focus analysis on word: "${targetText}".`;
@@ -22,38 +25,39 @@ class GeminiService {
             }
 
             const prompt = `
-                Analyze English audio (Azure/Cambridge style). 
+                ${langConfig.instruction}
                 ${contextInstruction}
-                Feedback in UZBEK. Transcription/IPA in English.
+                You are a world-class Language Proficiency Assessor. Analyze the audio with absolute precision.
+                IMPORTANT: Feedback MUST be in UZBEK. Transcription/IPA in ${langConfig.name}.
+                
+                Scoring Guidelines (0-100):
+                - Be CRITICAL and HONEST. If the pronunciation is perfect, give 95-100. If it's poor, give 30-50. Do NOT use default or average scores like 65 or 70 every time.
+                - Phonetic Accuracy: Precision of sounds.
+                - Oral Fluency: Speech rate, fillers ("uh", "um"), and pauses ("...").
+                - Prosody: Rhythm, stress, and intonation.
+                - Word Accuracy: Percentage of correctly spoken words.
+                - Intelligibility: How easy it is for a native speaker to understand.
 
-                Metrics (0-100):
-                1. Phonetic Accuracy.
-                2. Oral Fluency (fillers "uh", "um", pauses "...").
-                3. Prosody.
-                4. Word Accuracy.
-                5. Grammar/Lexical.
-                6. Intelligibility.
-
-                IMPORTANT: Return ONLY a valid JSON object.
+                Return ONLY a valid JSON object:
                 {
-                    "overallScore": number,
+                    "overallScore": number (calculated average),
                     "accuracyScore": number,
                     "fluencyScore": number,
                     "prosodyScore": number,
                     "completenessScore": number,
                     "wordAccuracy": number,
-                    "ipa": "IPA",
-                    "stressExample": "STRESS",
-                    "transcription": "Verbatim",
-                    "englishLevel": "CEFR",
+                    "ipa": "IPA transcription",
+                    "stressExample": "STRESS patterns",
+                    "transcription": "Verbatim transcription with fillers and pauses",
+                    "englishLevel": "CEFR Level (e.g., A1, B2, C1)",
                     "detailedFeedback": {
-                        "strengths": ["UZB"],
-                        "areasForImprovement": ["UZB"],
+                        "strengths": ["at least 2 specific strengths in UZBEK"],
+                        "areasForImprovement": ["at least 2 specific areas in UZBEK"],
                         "phoneticAnalysis": {
-                            "mispronouncedWords": [{"word": "str", "errorType": "type", "phoneticError": "UZB", "correctPronunciation": "IPA", "improvementTip": "UZB"}],
-                            "prosodyFeedback": "UZB"
+                            "mispronouncedWords": [{"word": "string", "errorType": "Vowel/Consonant/Stress", "phoneticError": "Description in UZBEK", "correctPronunciation": "IPA", "improvementTip": "Advice in UZBEK"}],
+                            "prosodyFeedback": "Detailed rhythm/intonation feedback in UZBEK"
                         },
-                        "actionPlan": ["steps UZB"]
+                        "actionPlan": ["3 specific steps in UZBEK"]
                     }
                 }
             `;
@@ -82,8 +86,8 @@ class GeminiService {
             }, {
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`,
-                    'HTTP-Referer': 'https://github.com/ravon-ai',
-                    'X-Title': 'Ravon AI Bot',
+                    'HTTP-Referer': 'https://github.com/zabon-ai',
+                    'X-Title': 'Zabon AI Bot',
                     'Content-Type': 'application/json'
                 },
                 timeout: 60000 // 60 sekund kutish (audio tahlili uzoqroq vaqt olishi mumkin)
@@ -111,6 +115,7 @@ class GeminiService {
 
             return {
                 ...assessmentData,
+                targetLang: targetLang, // Add targetLang to the result
                 _usage: usage,
                 _model: this.modelName
             };
@@ -124,30 +129,34 @@ class GeminiService {
             if (retryCount < 2) {
                 console.log(`Retrying... (${retryCount + 1})`);
                 await new Promise(resolve => setTimeout(resolve, 2000));
-                return this.analyzeAudio(audioBuffer, mimeType, type, targetText, retryCount + 1);
+                return this.analyzeAudio(audioBuffer, mimeType, type, targetText, targetLang, retryCount + 1);
             }
             
             throw error;
         }
     }
 
-    async generateTestText(difficulty = 'medium', type = 'sentence') {
+    async generateTestText(difficulty = 'medium', type = 'sentence', targetLang = 'en') {
         try {
+            const constants = require('../constants');
+            const langConfig = constants.SUPPORTED_LANGUAGES[targetLang] || constants.SUPPORTED_LANGUAGES.en;
+            const scriptInstruction = langConfig.script ? `Use only ${langConfig.script} script.` : '';
+            
             const timestamp = Date.now();
             const randomSeed = Math.random().toString(36).substring(7);
             let prompt = '';
             
             if (type === 'text') {
                 prompt = `
-                    Generate a UNIQUE English text for pronunciation practice. 
+                    Generate a UNIQUE ${langConfig.name} text for pronunciation practice. 
                     Difficulty: ${difficulty}
                     Type: longer text with 4-5 sentences
-                    Session ID: ${randomSeed}
+                    ${scriptInstruction}
                     
                     Requirements:
                     - Create ORIGINAL content, do not repeat common examples
                     - Use different vocabulary and themes each time
-                    - Common English words and phrases appropriate for ${difficulty} level
+                    - Common ${langConfig.name} words and phrases appropriate for ${difficulty} level
                     - Suitable for pronunciation testing
                     - Length: exactly 4-5 sentences (20-50 words total)
                     - Include various phonetic sounds
@@ -155,14 +164,15 @@ class GeminiService {
                     - Make it engaging and different from previous responses
                     - Focus on: ${['daily life', 'technology', 'nature', 'education', 'work', 'hobbies'][Math.floor(Math.random() * 6)]} topic
                     
-                    Return ONLY the generated text, no explanations or formatting.
+                    Return ONLY the generated text, no explanations, no formatting, no "Session ID", no "Text:" prefix.
+                    IMPORTANT: Use ${langConfig.script || 'native'} characters/alphabet only.
                 `;
             } else {
                 prompt = `
-                    Generate a UNIQUE English text for pronunciation practice. 
+                    Generate a UNIQUE ${langConfig.name} text for pronunciation practice. 
                     Difficulty: ${difficulty}
                     Type: ${type === 'word' ? 'single word' : 'sentence or short paragraph'}
-                    Session ID: ${randomSeed}
+                    ${scriptInstruction}
                     
                     Requirements:
                     - Create ORIGINAL content, avoid clichés and common examples
@@ -173,7 +183,8 @@ class GeminiService {
                     - Make it interesting and educational
                     - Focus on: ${['daily life', 'technology', 'nature', 'education', 'work', 'hobbies'][Math.floor(Math.random() * 6)]} topic
                     
-                    Return ONLY the generated ${type === 'word' ? 'word' : 'text'}, no explanations, no quotes, no periods at the end of single words.
+                    Return ONLY the generated ${type === 'word' ? 'word' : 'text'}, no explanations, no quotes, no periods at the end of single words, no "Session ID".
+                    IMPORTANT: Use ${langConfig.script || 'native'} characters/alphabet only.
                 `;
             }
 
@@ -190,8 +201,8 @@ class GeminiService {
             }, {
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`,
-                    'HTTP-Referer': 'https://github.com/ravon-ai',
-                    'X-Title': 'Ravon AI Bot',
+                    'HTTP-Referer': 'https://github.com/zabon-ai',
+                    'X-Title': 'Zabon AI Bot',
                     'Content-Type': 'application/json'
                 },
                 timeout: 30000
@@ -201,32 +212,15 @@ class GeminiService {
                 throw new Error("OpenRouterdan bo'sh javob keldi.");
             }
 
-            const generatedText = response.data.choices[0].message.content.trim();
+            let text = response.data.choices[0].message.content.trim();
             
-            // Clean and validate the generated text
-            const cleanText = generatedText.replace(/[^\w\s.,!?'-]/g, '').trim();
-            
-            if (!cleanText || cleanText.length < 2) {
-                throw new Error("Generated text is too short or invalid");
-            }
-
-            // For text type, ensure it has 4-5 sentences
-            if (type === 'text') {
-                const sentenceCount = cleanText.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
-                if (sentenceCount < 4 || sentenceCount > 5) {
-                    console.warn(`Generated text has ${sentenceCount} sentences, expected 4-5`);
-                }
-            }
-
-            // For word type, ensure it's truly a single word
-            if (type === 'word') {
-                const words = cleanText.split(/\s+/).filter(w => w.length > 0);
-                if (words.length > 0) {
-                    return words[0]; // Take only the first word if AI returned more
-                }
-            }
-
-            return cleanText;
+            // Clean common patterns
+            text = text.replace(/Session ID:? \w+/gi, '')
+                       .replace(/Text:? /gi, '')
+                       .replace(/^"|"$/g, '') // Remove wrapping quotes
+                       .trim();
+                       
+            return text;
         } catch (error) {
             console.error("AI text generation error:", error.message);
             throw new Error(`AI matn yaratishda xatolik: ${error.message}`);

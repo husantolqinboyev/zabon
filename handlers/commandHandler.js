@@ -10,12 +10,18 @@ const config = require('../config');
 
 class CommandHandler {
     constructor() {
-        this.mainMenu = Markup.keyboard([
-            [Markup.button.webApp('🚀 Ravon AI Mini App', config.APP_URL)],
-            ['🎙 Talaffuzni tekshirish', '🔊 Matnni ovozga aylantirish'],
-            ['👤 Profil', '💳 Tariflar | Ko\'proq foyda olish'],
-            ['❓ Bot qanday ishlaydi?']
-        ]).resize();
+        const menuRows = [];
+        
+        // Only add Web App button if URL is provided
+        if (config.APP_URL && config.APP_URL.trim() !== '') {
+            menuRows.push([Markup.button.webApp('🚀 Zabon AI Mini App', config.APP_URL)]);
+        }
+
+        menuRows.push(['🎙 Talaffuzni tekshirish', '🔊 Matnni ovozga aylantirish']);
+        menuRows.push(['👤 Profil', '🌐 Tilni sozlash']);
+        menuRows.push(['💳 Tariflar | Ko\'proq foyda olish', '❓ Bot qanday ishlaydi?']);
+
+        this.mainMenu = Markup.keyboard(menuRows).resize();
 
         this.adminMenu = Markup.keyboard([
             ['👥 Foydalanuvchilar', '➕ Matn qo\'shish'],
@@ -44,8 +50,25 @@ class CommandHandler {
             referrerId = parseInt(startPayload);
         }
 
-        await database.saveUser(ctx.from, referrerId);
+        const user = await database.getUserByTelegramId(ctx.from.id);
+        const hasLang = user && user.target_lang;
 
+        if (!hasLang) {
+            // First time or language not set
+            const welcomeText = `Assalomu alaykum! **Zabon AI** ga xush kelibsiz! 👋\n\n` +
+                `Qaysi tilni o'rganishni (yoki talaffuzni tekshirishni) rejalashtirayotganingizni tanlang:`;
+
+            const constants = require('../constants');
+            const buttons = Object.entries(constants.SUPPORTED_LANGUAGES).map(([code, config]) => {
+                return [Markup.button.callback(`${config.flag} ${config.name}`, `init_lang_${code}${referrerId ? '_' + referrerId : ''}`)];
+            });
+
+            return ctx.replyWithMarkdown(welcomeText, Markup.inlineKeyboard(buttons));
+        }
+
+        // If user already exists and has lang, show main menu
+        await database.saveUser(ctx.from, referrerId);
+        
         // Auto-set first user as admin if no admin exists and no ADMIN_ID in .env
         const adminCount = await database.getAdminCount();
         if (adminCount === 0 && (!config.ADMIN_IDS || config.ADMIN_IDS.length === 0)) {
@@ -55,37 +78,10 @@ class CommandHandler {
         const isAdmin = await database.isAdmin(ctx.from.id);
         const isTeacher = await database.isTeacher(ctx.from.id);
 
-        // Get monthly users count
-        const monthlyUsers = await database.getMonthlyUsers();
-        const totalUsers = await database.getTotalUserCount();
-
-        let displayUsers, userLabel;
-        if (isAdmin) {
-            // Admins see real numbers
-            displayUsers = monthlyUsers > 100 ? monthlyUsers : totalUsers;
-            userLabel = monthlyUsers > 100 ? 'oylik' : 'jami';
-        } else {
-            // Public users see impressive multiplied numbers
-            if (monthlyUsers > 100) {
-                displayUsers = Math.floor(monthlyUsers * 2.5); // Multiply by 2.5
-                userLabel = 'oylik';
-            } else {
-                // Show impressive base number for small user counts
-                displayUsers = Math.floor(Math.random() * 50) + 120; // Random between 120-170
-                userLabel = 'oylik';
-            }
-        }
-
         let welcomeMessage = `Assalomu alaykum! 👋\n\n` +
-            `Men **Ravon AI** — sizning ingliz tili talaffuzingizni baholashga yordam beruvchi botman.\n\n` +
-            `🎯 **Ravon AI — Talaffuzingizni mukammallashtiring!**\n\n` +
-            `Assalomu alaykum! Ingliz tilida ravon gapirishni biz bilan o'rganing.\n\n` +
-            `**Bot imkoniyatlari:**\n\n` +
-            `✅ **Talaffuzni tekshirish:** Nutqingizni ovozli xabar orqali yuboring va xatolarni aniqlang.\n` +
-            `✅ **Matnni audioga o'tkazish:** Har qanday matnni to'g'ri talaffuzda eshiting.\n` +
-            `✅ **PDF tahlil:** Nutqingiz natijalarini professional PDF hisobot ko'rinishida oling.\n\n` +
-            `🎁 **Siz uchun 3 ta bepul imkoniyat tayyor!**\n\n` +
-            `👇 Hoziroq quyidagi bo'limlardan birini tanlang va nutqingizni sinab ko'ring!`;
+            `Men **Zabon AI** — sizning talaffuzingizni baholashga yordam beruvchi botman.\n\n` +
+            `🎯 **Talaffuzingizni mukammallashtiring!**\n\n` +
+            `Bot imkoniyatlaridan foydalanish uchun quyidagi tugmalardan birini tanlang:`;
 
         if (isAdmin) {
             welcomeMessage += `\n\n👨‍💼 Siz adminsiz. Admin panelga kirish uchun /admin buyrug'ini yuboring.`;
@@ -93,15 +89,45 @@ class CommandHandler {
             welcomeMessage += `\n\n👨‍🏫 Siz o'qituvchisiz. O'qituvchi paneliga kirish uchun /teacher buyrug'ini yuboring.`;
         }
 
-        const inlineKeyboard = Markup.inlineKeyboard([
-            [Markup.button.webApp('🚀 Ravon AI Web Panel', config.APP_URL)]
-        ]);
-
         await ctx.reply(welcomeMessage, {
             parse_mode: 'Markdown',
-            ...this.mainMenu,
-            ...inlineKeyboard.reply_markup
+            ...this.mainMenu
         });
+    }
+
+    async handleInitialLangSelect(ctx) {
+        const parts = ctx.match[0].split('_');
+        const lang = parts[2];
+        const referrerId = parts[3] ? parseInt(parts[3]) : null;
+
+        const constants = require('../constants');
+        const langConfig = constants.SUPPORTED_LANGUAGES[lang];
+
+        if (!langConfig) {
+            return ctx.answerCbQuery('Xatolik yuz berdi.', { show_alert: true });
+        }
+
+        try {
+            // Save user with initial language
+            await database.saveUser({
+                ...ctx.from,
+                target_lang: lang
+            }, referrerId);
+
+            await ctx.answerCbQuery(`✅ ${langConfig.name} tanlandi!`);
+            
+            let finalMsg = `Ajoyib! Siz **${langConfig.name}** o'rganishni tanladingiz. 🚀\n\n` +
+                `Endi barcha tahlillar va mashqlar ushbu tilda bo'ladi.\n\n` +
+                `Boshlash uchun pastdagi tugmalardan foydalaning:`;
+
+            await ctx.editMessageText(finalMsg, { parse_mode: 'Markdown' });
+            
+            // Show main menu with a new message to trigger the keyboard
+            await ctx.reply('Zabon AI xizmatlaridan foydalanishingiz mumkin:', this.mainMenu);
+        } catch (error) {
+            console.error('Initial language select error:', error);
+            await ctx.answerCbQuery('Xatolik yuz berdi.', { show_alert: true });
+        }
     }
 
     async handleHowItWorks(ctx) {
@@ -109,7 +135,11 @@ class CommandHandler {
     }
 
     async handleMiniApp(ctx) {
-        await ctx.reply('📱 Ravon AI Mini App-ni ochish uchun pastdagi tugmani bosing:',
+        if (!config.APP_URL || config.APP_URL.trim() === '') {
+            return ctx.reply('⚠️ Mini App hozircha sozlanmagan. Iltimos, keyinroq urinib ko\'ring.');
+        }
+
+        await ctx.reply('📱 Zabon AI Mini App-ni ochish uchun pastdagi tugmani bosing:',
             Markup.inlineKeyboard([
                 [Markup.button.webApp('🚀 Mini App-ni ochish', config.APP_URL)]
             ])
@@ -180,7 +210,6 @@ class CommandHandler {
     }
 
     async handlePronunciationWriteOwn(ctx) {
-        ctx.session = ctx.session || {};
         ctx.session.state = 'waiting_for_text_for_pronunciation';
         await ctx.editMessageText('✍️ Iltimos, talaffuz qilmoqchi bo\'lgan matningizni yozing:').catch(async () => {
             await ctx.reply('✍️ Iltimos, talaffuz qilmoqchi bo\'lgan matningizni yozing:');
@@ -239,14 +268,14 @@ class CommandHandler {
 
     async handleRandomStart(ctx) {
         try {
-            const type = ctx.callbackQuery.data === 'random_word' ? 'word' : 'text';
-            const word = await database.getRandomTestWordByType(type);
+            const type = ctx.match[1]; // word or text
+            const targetLang = await database.getUserLanguage(ctx.from.id);
+            const word = await database.getRandomTestWordByType(type, targetLang);
 
             if (!word) {
                 return ctx.answerCbQuery(`⚠️ Hozircha tasodifiy ${type === 'word' ? 'so\'zlar' : 'matnlar'} mavjud emas.`, { show_alert: true });
             }
 
-            ctx.session = ctx.session || {};
             ctx.session.testWord = word.word;
 
             const isLong = word.word.trim().split(/\s+/).length > 2;
@@ -271,7 +300,8 @@ class CommandHandler {
 
     async handleTestPronunciation(ctx) {
         try {
-            const words = await database.getRecentTestWords(10);
+            const targetLang = await database.getUserLanguage(ctx.from.id);
+            const words = await database.getRecentTestWords(10, targetLang);
             if (!words || words.length === 0) {
                 return ctx.reply('Hozircha test matnlari yo\'q. O\'qituvchilar tez orada qo\'shadi.');
             }
@@ -300,7 +330,6 @@ class CommandHandler {
                 return ctx.answerCbQuery("⚠️ Matn topilmadi.", { show_alert: true });
             }
 
-            ctx.session = ctx.session || {};
             // State'ni hali o'rnatmaymiz, faqat matnni saqlaymiz
             ctx.session.testWord = word.word;
 
@@ -343,7 +372,8 @@ class CommandHandler {
 
     async handleTestPronunciationList(ctx) {
         try {
-            const words = await database.getRecentTestWords(10);
+            const targetLang = await database.getUserLanguage(ctx.from.id);
+            const words = await database.getRecentTestWords(10, targetLang);
             if (!words || words.length === 0) {
                 return ctx.editMessageText('Hozircha test matnlari yo\'q.');
             }
@@ -372,7 +402,8 @@ class CommandHandler {
             }
 
             await ctx.answerCbQuery("Audio tayyorlanmoqda... ⏳");
-            const audioPath = await ttsService.generateAudio(text, 'en');
+            const targetLang = await database.getUserLanguage(ctx.from.id);
+            const audioPath = await ttsService.generateAudio(text, targetLang);
 
             await ctx.reply(`🔊 *Namuna:*\n\n_"${text}"_`, { parse_mode: 'Markdown' });
             await ctx.replyWithAudio({ source: audioPath });
@@ -413,58 +444,123 @@ class CommandHandler {
     }
 
     async renderTextsPage(ctx, page = 0, type = 'word') {
-        const rows = await database.getRecentTestWordsByType(type, 50);
-        if (!rows || rows.length === 0) {
+        try {
+            const constants = require('../constants');
+            const userId = ctx.from?.id;
+            if (!userId) return;
+
+            const userLang = await database.getUserLanguage(userId);
+            if (!ctx.session) ctx.session = {};
+            const targetLang = ctx.session.textsLang || userLang;
+            const langConfig = constants.SUPPORTED_LANGUAGES[targetLang] || constants.SUPPORTED_LANGUAGES.en;
+
+            const rows = await database.getRecentTestWordsByType(type, 50, targetLang);
+            if (!rows || rows.length === 0) {
+                const emptyMsg = `Hozircha ${langConfig.flag} **${langConfig.name}** tilida ${type === 'word' ? 'so\'zlar' : 'matnlar'} mavjud emas.`;
+                const emptyButtons = [[Markup.button.callback('🌐 Tilni o\'zgartirish', 'texts_change_lang')]];
+                const emptyKeyboard = Markup.inlineKeyboard(emptyButtons);
+
+                if (ctx.callbackQuery) {
+                    await ctx.editMessageText(emptyMsg, { parse_mode: 'Markdown', ...emptyKeyboard }).catch(async () => {
+                        await ctx.reply(emptyMsg, { parse_mode: 'Markdown', ...emptyKeyboard });
+                    });
+                    await ctx.answerCbQuery().catch(() => { });
+                    return;
+                }
+                return ctx.reply(emptyMsg, { parse_mode: 'Markdown', ...emptyKeyboard });
+            }
+
+            const pageSize = 10;
+            const totalPages = Math.ceil(rows.length / pageSize);
+            if (page >= totalPages) page = totalPages - 1;
+            if (page < 0) page = 0;
+
+            const start = page * pageSize;
+            const pageItems = rows.slice(start, start + pageSize);
+            
+            ctx.session.textsPage = page;
+            ctx.session.textsType = type;
+            ctx.session.textsLang = targetLang;
+
+            let msg = `📚 *${langConfig.flag} ${langConfig.name}: ${type === 'word' ? 'So\'zlar' : 'Matnlar'} ro'yxati*\n`;
+            msg += `📄 Sahifa: ${page + 1}/${totalPages}\n\n`;
+
+            pageItems.forEach((r, i) => {
+                const idx = start + i + 1;
+                msg += `${idx}. ${r.word}\n`;
+            });
+
+            const buttons = [];
+            const tabs = [
+                Markup.button.callback(`${type === 'word' ? '✅ ' : ''}🔤 So'zlar`, 'texts_type_word'),
+                Markup.button.callback(`${type === 'text' ? '✅ ' : ''}📝 Matnlar`, 'texts_type_text')
+            ];
+            buttons.push(tabs);
+
+            const row1 = [];
+            const row2 = [];
+            pageItems.slice(0, 5).forEach((r, i) => {
+                row1.push(Markup.button.callback(`${start + i + 1}`, `delete_text_${r.id}`));
+            });
+            pageItems.slice(5, 10).forEach((r, i) => {
+                row2.push(Markup.button.callback(`${start + i + 6}`, `delete_text_${r.id}`));
+            });
+            if (row1.length) buttons.push(row1);
+            if (row2.length) buttons.push(row2);
+
+            const controls = [];
+            if (page > 0) {
+                controls.push(Markup.button.callback('⬅️', `texts_page_${page - 1}`));
+            }
+            controls.push(Markup.button.callback('❌', 'cancel_texts_mgmt'));
+            if (page < totalPages - 1) {
+                controls.push(Markup.button.callback('➡️', `texts_page_${page + 1}`));
+            }
+            if (controls.length) buttons.push(controls);
+
+            buttons.push([Markup.button.callback('🌐 Tilni o\'zgartirish', 'texts_change_lang')]);
+
+            const keyboard = Markup.inlineKeyboard(buttons);
             if (ctx.callbackQuery) {
-                await ctx.editMessageText(`Hozircha ${type === 'word' ? 'so\'zlar' : 'matnlar'} mavjud emas.`).catch(async () => {
-                    await ctx.reply(`Hozircha ${type === 'word' ? 'so\'zlar' : 'matnlar'} mavjud emas.`);
+                await ctx.editMessageText(msg, { parse_mode: 'Markdown', ...keyboard }).catch(async () => {
+                    await ctx.reply(msg, { parse_mode: 'Markdown', ...keyboard });
                 });
                 await ctx.answerCbQuery().catch(() => { });
-                return;
-            }
-            return ctx.reply(`Hozircha ${type === 'word' ? 'so\'zlar' : 'matnlar'} mavjud emas.`);
-        }
-        const pageSize = 10;
-        const start = page * pageSize;
-        const pageItems = rows.slice(start, start + pageSize);
-        if (!ctx.session) ctx.session = {};
-        ctx.session.textsPage = page;
-        ctx.session.textsType = type;
-        let msg = `📚 *${type === 'word' ? 'So\'zlar' : 'Matnlar'} ro'yxati*\n\n`;
-        pageItems.forEach((r, i) => {
-            const idx = start + i + 1;
-            msg += `${idx}. ${r.word}\n`;
-        });
-        const buttons = [];
-        const tabs = [
-            Markup.button.callback(`${type === 'word' ? '✅ ' : ''}🔤 So'zlar`, 'texts_type_word'),
-            Markup.button.callback(`${type === 'text' ? '✅ ' : ''}📝 Matnlar`, 'texts_type_text')
-        ];
-        buttons.push(tabs);
-        const row1 = [];
-        const row2 = [];
-        pageItems.slice(0, 5).forEach((r, i) => {
-            row1.push(Markup.button.callback(`${i + 1}`, `delete_text_${r.id}`));
-        });
-        pageItems.slice(5, 10).forEach((r, i) => {
-            row2.push(Markup.button.callback(`${i + 6}`, `delete_text_${r.id}`));
-        });
-        if (row1.length) buttons.push(row1);
-        if (row2.length) buttons.push(row2);
-        const controls = [];
-        controls.push(Markup.button.callback('⬅️', `texts_page_${page - 1}`));
-        controls.push(Markup.button.callback('❌', 'cancel_texts_mgmt'));
-        controls.push(Markup.button.callback('➡️', `texts_page_${page + 1}`));
-        buttons.push(controls);
-        const keyboard = Markup.inlineKeyboard(buttons);
-        if (ctx.callbackQuery) {
-            await ctx.editMessageText(msg, { parse_mode: 'Markdown', ...keyboard }).catch(async () => {
+            } else {
                 await ctx.reply(msg, { parse_mode: 'Markdown', ...keyboard });
-            });
-            await ctx.answerCbQuery().catch(() => { });
-        } else {
-            await ctx.reply(msg, { parse_mode: 'Markdown', ...keyboard });
+            }
+        } catch (error) {
+            console.error('renderTextsPage error:', error);
+            if (ctx.callbackQuery) await ctx.answerCbQuery('Xatolik yuz berdi.').catch(() => {});
         }
+    }
+
+    async handleTextsChangeLang(ctx) {
+        const isTeacher = await database.isTeacher(ctx.from.id);
+        if (!isTeacher) return;
+
+        const constants = require('../constants');
+        const buttons = Object.entries(constants.SUPPORTED_LANGUAGES).map(([code, config]) => {
+            return [Markup.button.callback(`${config.flag} ${config.name}`, `texts_select_lang_${code}`)];
+        });
+        buttons.push([Markup.button.callback('🔙 Orqaga', 'texts_page_0')]);
+
+        const msg = '🌐 *Matnlar ro\'yxati uchun tilni tanlang:*';
+        if (ctx.callbackQuery) {
+            await ctx.editMessageText(msg, { parse_mode: 'Markdown', ...Markup.inlineKeyboard(buttons) });
+            await ctx.answerCbQuery();
+        }
+    }
+
+    async handleTextsSelectLang(ctx) {
+        const isTeacher = await database.isTeacher(ctx.from.id);
+        if (!isTeacher) return;
+
+        const lang = ctx.match[1];
+        ctx.session.textsLang = lang;
+        ctx.session.textsPage = 0;
+
+        return this.renderTextsPage(ctx, 0, ctx.session.textsType || 'word');
     }
 
     async handleTextsPage(ctx) {
@@ -540,7 +636,8 @@ class CommandHandler {
         });
 
         try {
-            const audioPath = await ttsService.generateAudio(text, 'en');
+            const targetLang = await database.getUserLanguage(ctx.from.id);
+            const audioPath = await ttsService.generateAudio(text, targetLang);
             await ctx.replyWithAudio({ source: audioPath });
             await ttsService.cleanup(audioPath);
             await database.incrementUsage(ctx.from.id);
@@ -560,6 +657,8 @@ class CommandHandler {
         const stats = await database.getUserStats(ctx.from.id);
         const user = await database.getUserByTelegramId(ctx.from.id);
         const referralInfo = await database.getReferralInfo(ctx.from.id);
+        const constants = require('../constants');
+        const langConfig = constants.SUPPORTED_LANGUAGES[user.target_lang || 'en'] || constants.SUPPORTED_LANGUAGES.en;
 
         if (!user) {
             return ctx.reply("Siz hali ro'yxatdan o'tmagansiz. Iltimos, /start buyrug'ini bosing.");
@@ -581,6 +680,7 @@ class CommandHandler {
         }
 
         profileMsg += `📊 *Natijalarim:*\n` +
+            `• O'rganish tili: ${langConfig.flag} ${langConfig.name}\n` +
             `• Jami foydalanish: ${stats ? stats.total_assessments : 0}\n` +
             `• O'rtacha ball: ${stats ? Math.round(stats.avg_overall) : 0}/100\n\n` +
             `📊 *Sizning limitingiz:*\n` +
@@ -772,7 +872,7 @@ class CommandHandler {
         ctx.session.broadcast = ctx.session.broadcast || { buttons: [] };
         ctx.session.state = 'broadcast_waiting_button';
         await ctx.answerCbQuery().catch(() => { });
-        await ctx.reply('Tugma qo‘shish: "Matn | Link" ko‘rinishida yuboring.\nMisol: Ravon AI | https://t.me/ravon_ai');
+        await ctx.reply('Tugma qo‘shish: "Matn | Link" ko‘rinishida yuboring.\nMisol: Zabon AI | https://t.me/zabon_ai');
     }
 
     async handleBroadcastAddButtonSave(ctx) {
@@ -781,7 +881,7 @@ class CommandHandler {
         const text = ctx.message.text || '';
         const parts = text.split('|').map(s => s.trim());
         if (parts.length < 2) {
-            return ctx.reply('Format noto‘g‘ri. Misol: Ravon AI | https://t.me/ravon_ai');
+            return ctx.reply('Format noto‘g‘ri. Misol: Zabon AI | https://t.me/zabon_ai');
         }
         const label = parts[0];
         const url = parts[1];
@@ -798,7 +898,7 @@ class CommandHandler {
         ctx.session.broadcast = ctx.session.broadcast || { buttons: [] };
         ctx.session.state = 'broadcast_waiting_bot_button';
         await ctx.answerCbQuery().catch(() => { });
-        await ctx.reply('Maxsus bot tugmasi: "Matn | @botusername | start_param" ko‘rinishida yuboring.\nMisol: Boshlash | @ravon_ai_bot | promo123');
+        await ctx.reply('Maxsus bot tugmasi: "Matn | @botusername | start_param" ko‘rinishida yuboring.\nMisol: Boshlash | @zabon_ai_bot | promo123');
     }
 
     async handleBroadcastAddBotButtonSave(ctx) {
@@ -807,7 +907,7 @@ class CommandHandler {
         const text = ctx.message.text || '';
         const parts = text.split('|').map(s => s.trim());
         if (parts.length < 2) {
-            return ctx.reply('Format noto‘g‘ri. Misol: Boshlash | @ravon_ai_bot | promo123');
+            return ctx.reply('Format noto‘g‘ri. Misol: Boshlash | @zabon_ai_bot | promo123');
         }
         const label = parts[0];
         const username = parts[1].replace('@', '');
@@ -980,28 +1080,45 @@ class CommandHandler {
         const isTeacher = await database.isTeacher(ctx.from.id);
         if (!isTeacher) return;
 
+        const constants = require('../constants');
+        const buttons = Object.entries(constants.SUPPORTED_LANGUAGES).map(([code, config]) => {
+            return [Markup.button.callback(`${config.flag} ${config.name}`, `manual_add_lang_${code}`)];
+        });
+
+        await ctx.reply('🌐 *Qaysi til uchun so\'z qo\'shmoqchisiz?*', {
+            parse_mode: 'Markdown',
+            ...Markup.inlineKeyboard(buttons)
+        });
+    }
+
+    async handleManualAddLangSelect(ctx) {
+        const lang = ctx.match[1];
         ctx.session = ctx.session || {};
         ctx.session.state = 'waiting_for_new_test_word';
-        await ctx.reply('➕ Yangi test so\'zini yuboring:');
+        ctx.session.manualAddLang = lang;
+
+        const constants = require('../constants');
+        const langName = constants.SUPPORTED_LANGUAGES[lang].name;
+
+        await ctx.editMessageText(`➕ **${langName}** tili uchun yangi test so'zini (yoki matnni) yuboring:`, { parse_mode: 'Markdown' });
+        await ctx.answerCbQuery();
     }
 
     async handleAiTextGeneration(ctx) {
         const isTeacher = await database.isTeacher(ctx.from.id);
         if (!isTeacher) return;
 
-        const aiMenu = Markup.inlineKeyboard([
-            [Markup.button.callback('📝 Oson gap', 'ai_generate_easy_sentence')],
-            [Markup.button.callback('📝 O\'rta gap', 'ai_generate_medium_sentence')],
-            [Markup.button.callback('📝 Qiyin gap', 'ai_generate_hard_sentence')],
-            [Markup.button.callback('📄 Oson matn (4-5 gap)', 'ai_generate_easy_text')],
-            [Markup.button.callback('📄 O\'rta matn (4-5 gap)', 'ai_generate_medium_text')],
-            [Markup.button.callback('📄 Qiyin matn (4-5 gap)', 'ai_generate_hard_text')],
-            [Markup.button.callback('🔙 Orqaga', 'back_to_teacher_menu')]
-        ]);
+        const constants = require('../constants');
+        const buttons = Object.entries(constants.SUPPORTED_LANGUAGES).map(([code, config]) => {
+            return [Markup.button.callback(`${config.flag} ${config.name}`, `ai_lang_text_${code}`)];
+        });
 
-        await ctx.reply('🤖 *AI yordamida matn yaratish*\n\nQanday turdagi matn yoki gap yaratmoqchisiz:', {
+        // Add "All languages" button
+        buttons.push([Markup.button.callback('🌍 Barcha tillarga qo\'shish', 'ai_lang_text_all')]);
+
+        await ctx.reply('🌐 *AI yordamida matn yaratish*\n\nQaysi tilni tanlaysiz:', {
             parse_mode: 'Markdown',
-            ...aiMenu
+            ...Markup.inlineKeyboard(buttons)
         });
     }
 
@@ -1009,38 +1126,90 @@ class CommandHandler {
         const isTeacher = await database.isTeacher(ctx.from.id);
         if (!isTeacher) return;
 
-        const aiMenu = Markup.inlineKeyboard([
-            [Markup.button.callback('🔤 Oson so\'z', 'ai_generate_easy_word')],
-            [Markup.button.callback('🔤 O\'rta so\'z', 'ai_generate_medium_word')],
-            [Markup.button.callback('🔤 Qiyin so\'z', 'ai_generate_hard_word')],
-            [Markup.button.callback('🔙 Orqaga', 'back_to_teacher_menu')]
-        ]);
-
-        await ctx.reply('🤖 *AI yordamida so\'z yaratish*\n\nQanday darajadagi so\'z yaratmoqchisiz:', {
-            parse_mode: 'Markdown',
-            ...aiMenu
+        const constants = require('../constants');
+        const buttons = Object.entries(constants.SUPPORTED_LANGUAGES).map(([code, config]) => {
+            return [Markup.button.callback(`${config.flag} ${config.name}`, `ai_lang_word_${code}`)];
         });
+
+        // Add "All languages" button
+        buttons.push([Markup.button.callback('🌍 Barcha tillarga qo\'shish', 'ai_lang_word_all')]);
+
+        await ctx.reply('🌐 *AI yordamida so\'z yaratish*\n\nQaysi tilni tanlaysiz:', {
+            parse_mode: 'Markdown',
+            ...Markup.inlineKeyboard(buttons)
+        });
+    }
+
+    async handleAiLangSelect(ctx) {
+        const type = ctx.match[1]; // text or word
+        const lang = ctx.match[2];
+        const constants = require('../constants');
+        const langConfig = lang === 'all' ? { flag: '🌍', name: 'Barcha tillar' } : constants.SUPPORTED_LANGUAGES[lang];
+
+        let buttons = [];
+        if (type === 'word') {
+            buttons = [
+                [Markup.button.callback(`🔤 Oson so'z`, `ai_gen_${lang}_easy_word`)],
+                [Markup.button.callback(`🔤 O'rta so'z`, `ai_gen_${lang}_medium_word`)],
+                [Markup.button.callback(`🔤 Qiyin so'z`, `ai_gen_${lang}_hard_word`)]
+            ];
+        } else {
+            buttons = [
+                [Markup.button.callback(`📝 Oson gap`, `ai_gen_${lang}_easy_sentence`)],
+                [Markup.button.callback(`📝 O'rta gap`, `ai_gen_${lang}_medium_sentence`)],
+                [Markup.button.callback(`📝 Qiyin gap`, `ai_gen_${lang}_hard_sentence`)],
+                [Markup.button.callback(`📄 Oson matn`, `ai_gen_${lang}_easy_text`)],
+                [Markup.button.callback(`📄 O'rta matn`, `ai_gen_${lang}_medium_text`)],
+                [Markup.button.callback(`📄 Qiyin matn`, `ai_gen_${lang}_hard_text`)]
+            ];
+        }
+
+        buttons.push([Markup.button.callback('🔙 Orqaga', 'back_to_teacher_menu')]);
+
+        await ctx.editMessageText(`🤖 *${langConfig.flag} ${langConfig.name}* tili uchun ${type === 'word' ? 'so\'z' : 'matn/gap'} yaratish\n\nTurini va qiyinchiligini tanlang:`, {
+            parse_mode: 'Markdown',
+            ...Markup.inlineKeyboard(buttons)
+        });
+        await ctx.answerCbQuery();
     }
 
     async handleAiGenerate(ctx) {
         const isTeacher = await database.isTeacher(ctx.from.id);
         if (!isTeacher) return;
 
-        const difficulty = ctx.match[1];
-        const type = ctx.match[2];
+        const langCode = ctx.match[1];
+        const difficulty = ctx.match[2];
+        const type = ctx.match[3];
+
+        const constants = require('../constants');
+        const languagesToGenerate = langCode === 'all' 
+            ? Object.keys(constants.SUPPORTED_LANGUAGES) 
+            : [langCode];
 
         try {
-            await ctx.answerCbQuery("AI yordamida yaratilmoqda... ⏳");
-
-            const generatedText = await geminiService.generateTestText(difficulty, type);
-
-            // Add to database
-            await database.addTestWord(generatedText);
+            await ctx.answerCbQuery(`AI yordamida ${langCode === 'all' ? 'barcha tillar uchun ' : ''}yaratilmoqda... ⏳`);
+            
+            const results = [];
+            for (const lang of languagesToGenerate) {
+                const langConfig = constants.SUPPORTED_LANGUAGES[lang];
+                try {
+                    const generatedText = await geminiService.generateTestText(difficulty, type, lang);
+                    await database.addTestWord(generatedText, difficulty, lang);
+                    results.push(`✅ **${langConfig.flag} ${langConfig.name}**: "${generatedText}"`);
+                } catch (err) {
+                    console.error(`Error generating for ${lang}:`, err);
+                    results.push(`❌ **${langConfig.flag} ${langConfig.name}**: Xatolik yuz berdi.`);
+                }
+            }
 
             const typeText = type === 'word' ? 'So\'z' : type === 'sentence' ? 'Gap' : 'Matn';
             const difficultyText = difficulty === 'easy' ? 'Oson' : difficulty === 'medium' ? 'O\'rta' : 'Qiyin';
 
-            await ctx.reply(`✅ *AI tomonidan yaratildi*\n\n🎯 *${typeText}* (${difficultyText})\n\n"${generatedText}"\n\n✅ Matn testlar ro\'yxatiga qo\'shildi!`, {
+            let resultMsg = `✅ *AI tomonidan yaratildi*\n\n🎯 *${typeText}* (${difficultyText})\n\n`;
+            resultMsg += results.join('\n\n');
+            resultMsg += `\n\n✅ Matnlar testlar ro'yxatiga qo'shildi!`;
+
+            await ctx.reply(resultMsg, {
                 parse_mode: 'Markdown'
             });
 
@@ -1610,7 +1779,7 @@ class CommandHandler {
 
     async handleHelp(ctx) {
         const helpMessage = `🤖 *Botdan qanday foydalanish mumkin?*\n\n` +
-            `🎯 **Ravon AI — Talaffuzingizni mukammallashtiring!**\n\n` +
+            `🎯 **Zabon AI — Talaffuzingizni mukammallashtiring!**\n\n` +
             `Assalomu alaykum! Ingliz tilida ravon gapirishni biz bilan o'rganing.\n\n` +
             `**Bot imkoniyatlari:**\n\n` +
             `✅ **Talaffuzni tekshirish:** Nutqingizni ovozli xabar orqali yuboring va xatolarni aniqlang.\n` +
@@ -1903,7 +2072,7 @@ class CommandHandler {
             const totalUsage = await database.getTotalApiUsage();
             const modelStats = await database.getApiStats();
 
-            let msg = `📊 *Ravon AI Monitoring*\n\n`;
+            let msg = `📊 *Zabon AI Monitoring*\n\n`;
 
             msg += `📈 *Umumiy statistika:*\n`;
             msg += `• Jami so'rovlar: \`${totalUsage.total_requests}\`\n`;
@@ -2136,7 +2305,7 @@ class CommandHandler {
             msg += `⏳ Keyingi bonusgaacha yana *${nextReward}* ta do'stingizni taklif qilishingiz kerak.`;
         }
 
-        const shareLink = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent("Ingliz tili talaffuzini Ravon AI yordamida bepul tahlil qiling! 🚀")}`;
+        const shareLink = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent("Ingliz tili talaffuzini Zabon AI yordamida bepul tahlil qiling! 🚀")}`;
 
         await ctx.replyWithMarkdown(msg, Markup.inlineKeyboard([
             [Markup.button.url('📤 Do\'stlarga ulashish', shareLink)]
@@ -2381,7 +2550,8 @@ class CommandHandler {
             await ctx.answerCbQuery("Audio tayyorlanmoqda... ⏳");
 
             const textToRead = data.targetText || data.transcription;
-            const audioPath = await ttsService.generateAudio(textToRead, 'en');
+            const targetLang = await database.getUserLanguage(ctx.from.id);
+            const audioPath = await ttsService.generateAudio(textToRead, targetLang);
 
             await ctx.reply(`🔊 *To'g'ri talaffuz:*\n\n_"${textToRead}"_`, { parse_mode: 'Markdown' });
             await ctx.replyWithAudio({ source: audioPath });
@@ -2390,6 +2560,44 @@ class CommandHandler {
         } catch (error) {
             console.error('Play Correct Error:', error);
             await ctx.reply("Audioni yaratishda xatolik yuz berdi.");
+        }
+    }
+
+    async handleLanguageMenu(ctx) {
+        const user = await database.getUserByTelegramId(ctx.from.id);
+        const currentLang = user.target_lang || 'en';
+        const constants = require('../constants');
+
+        let msg = `🌐 *O'rganish tilini sozlash*\n\n` +
+            `Siz hozirda **${constants.SUPPORTED_LANGUAGES[currentLang].name}** ni o'rganyapsiz.\n\n` +
+            `Qaysi tilni o'rganmoqchisiz? Tanlang:`;
+
+        const buttons = Object.entries(constants.SUPPORTED_LANGUAGES).map(([code, config]) => {
+            const prefix = code === currentLang ? '✅ ' : '';
+            return [Markup.button.callback(`${prefix}${config.flag} ${config.name}`, `set_lang_${code}`)];
+        });
+
+        await ctx.replyWithMarkdown(msg, Markup.inlineKeyboard(buttons));
+    }
+
+    async handleSetLanguage(ctx) {
+        const lang = ctx.match[1];
+        const constants = require('../constants');
+
+        if (!constants.SUPPORTED_LANGUAGES[lang]) {
+            return ctx.answerCbQuery('Noto\'g\'ri til tanlandi.', { show_alert: true });
+        }
+
+        try {
+            await database.setUserLanguage(ctx.from.id, lang);
+            const langName = constants.SUPPORTED_LANGUAGES[lang].name;
+            const langFlag = constants.SUPPORTED_LANGUAGES[lang].flag;
+
+            await ctx.answerCbQuery(`✅ O'rganish tili ${langName} ga o'zgartirildi!`);
+            await ctx.editMessageText(`✅ O'rganish tili muvaffaqiyatli o'zgartirildi!\n\n🌐 Yangi til: **${langFlag} ${langName}**\n\nEndi barcha AI tahlillar va testlar ushbu tilda bo'ladi.`, { parse_mode: 'Markdown' });
+        } catch (error) {
+            console.error('Set language error:', error);
+            await ctx.answerCbQuery('Xatolik yuz berdi.', { show_alert: true });
         }
     }
 }

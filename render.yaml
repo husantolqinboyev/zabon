@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: ravon-ai-bot
+    name: zabon-ai-bot
     env: node
     plan: free
     buildCommand: "npm install"
